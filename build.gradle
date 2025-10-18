@@ -14,12 +14,17 @@ buildscript {
 		classpath 'com.github.johnrengelman:shadow:8.1.1'
   	}
 }
+repositories {
+	mavenLocal()
+	mavenCentral()
+	maven {
+	  url "https://artifacts.fizzpod.com/public/mvn/"
+	}
+}
 
-apply plugin: 'com.fizzpod.pater-build'
 apply plugin: 'groovy'
 apply plugin: 'application'
-//apply plugin: 'com.github.johnrengelman.shadow'
-spotbugsTest.enabled = false
+
 
 compileJava {
     options.release = 17
@@ -29,21 +34,11 @@ compileGroovy {
     options.release = 17
 }
 
-mainClassName = 'com.fizzpod.ibroadcast.Main'
 
 application {
-	applicationName = "ibsync"
+	applicationName = "wiser"
+    mainClass = 'com.fizzpod.wiserproxy.Main'
 }
-
-shadowJar {
-  transform(com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer)
-}
-
-artifacts {
-    tasks.named("shadowJar")
-}
-
-build.dependsOn shadowJar
 
 dependencies {
 	implementation 'org.apache.groovy:groovy-all:4.0.28'
@@ -51,17 +46,14 @@ dependencies {
 
 	implementation 'org.tinylog:tinylog-api:2.7.0'
 	implementation 'org.tinylog:tinylog-impl:2.7.0'
-	implementation 'org.mapdb:mapdb:3.1.0'
 	implementation 'com.squareup.okhttp3:okhttp:5.1.0'
-	implementation 'net.jthink:jaudiotagger:3.0.1'
-	implementation 'commons-io:commons-io:2.20.0'
-	implementation 'org.apache.commons:commons-lang3:3.19.0'
 
 	testImplementation platform("org.spockframework:spock-bom:2.3-groovy-4.0")
   	testImplementation "org.spockframework:spock-core"
 
 }
 
+/*
 githubRelease {
     token project.hasProperty("github_release_token")? github_release_token: ""
 	tagName 'release-' + project.version
@@ -72,12 +64,10 @@ githubRelease {
     draft false 
 	dryRun false
     releaseAssets { ->
-		jar.outputs.files +
-		shadowDistZip.outputs.files +
-		shadowDistTar.outputs.files
+		jar.outputs.files
 	}
 }
-
+*/
 test {
   useJUnitPlatform()
   testLogging {
