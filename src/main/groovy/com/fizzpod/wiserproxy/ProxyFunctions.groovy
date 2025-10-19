@@ -115,6 +115,51 @@ public class ProxyFunctions {
         }
     }
 
+    def doPatch(def request) {
+        def url = "${options.url}${request.requestURI}"
+        info("Proxying Patch request to {}", url)
+        //copy heders
+        def contentType = request.getRequestHeaders().getFirst("Content-Type");
+        def requestHeaders = request.getRequestHeaders()
+        def forwardedHeaders = new Headers.Builder()
+        for(def header: requestHeaders.entrySet()) {
+            header.value.each { value ->
+                info("Setting header {}: {}", header.key, value)
+                forwardedHeaders.add(header.key, value)
+            }
+        }
+        forwardedHeaders.set("Host", new URL(url).getHost())
+        forwardedHeaders.set("Secret", options.secret)
+        Request okRequest = new Request.Builder()
+            .url(url)
+            .patch(RequestBody.create(MediaType.parse(contentType), request.requestBody.bytes))
+            .headers(forwardedHeaders.build())
+            .build()
+        info("Forwarding request to {}", url)
+        try(Response okResponse = okclient.newCall(okRequest).execute()) {
+            def status = okResponse.code
+            info("Received response code: {} from wiser", status)
+            //copy headers
+            def responseHeaders = okResponse.headers
+            for(def headerName : responseHeaders.names()) {
+                def headerValues = responseHeaders.values(headerName)
+                headerValues.each { value ->
+                    info("Setting response header {}: {}", headerName, value)
+                    request.responseHeaders.add(headerName, value)
+                }
+            }
+            //copy code
+            request.sendResponseHeaders(status, 0)
+            //copy body
+            def responseBody = okResponse.body.byteStream()
+            request.responseBody.withStream { outStream ->
+                responseBody.withStream { inStream ->
+                    outStream << inStream
+                }
+            }   
+        }
+    }
+
     private static OkHttpClient getUnsafeOkHttpClient() {
         try {
             // Create a trust manager that does not validate certificate chains

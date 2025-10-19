@@ -24,6 +24,8 @@ public class WebServer {
                         proxy.doGet(http)
                     } else if("POST" == http.requestMethod) {
                         proxy.doPost(http)
+                    } else if("PATCH" == http.requestMethod) {
+                        proxy.doPatch(http)
                     } else {
                         throw new RuntimeException("Unsupported method: ${http.requestMethod}")
                     }
