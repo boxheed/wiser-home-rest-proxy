@@ -42,7 +42,7 @@ public class ProxyFunctions {
             def contentType = request.getRequestHeaders().getFirst("Content-Type");
             requestBuilder.method(method, RequestBody.create(MediaType.parse(contentType), body));
         } else {
-            requestBuilder.method(method, null);
+            requestBuilder.get();
         }
 
         try (Response okResponse = okclient.newCall(requestBuilder.build()).execute()) {
