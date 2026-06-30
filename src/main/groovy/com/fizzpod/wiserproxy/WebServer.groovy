@@ -1,12 +1,12 @@
 package com.fizzpod.wiserproxy;
 
 import com.sun.net.httpserver.HttpServer
+import java.net.InetSocketAddress
+import java.util.concurrent.Executors
 
 import static org.tinylog.Logger.*;
 
 import org.tinylog.*
-import com.fizzpod.ibroadcast.functions.*;
-
 import groovy.json.JsonOutput
 
 
@@ -16,9 +16,10 @@ public class WebServer {
         def proxy = new ProxyFunctions(options)
         info("Starting Web Server on port {}", options.port)
         HttpServer.create(new InetSocketAddress(options.port), 0).with {
+            executor = Executors.newCachedThreadPool()
             createContext("/data") { http ->
                 try {
-                    // Proxy to IBroadcast functions
+                    // Proxy to wiser functions
                     info("Received {} on {} from {}", http.requestMethod, http.requestURI, http.remoteAddress.hostName)
                     if("GET" == http.requestMethod) {
                         proxy.doGet(http)
