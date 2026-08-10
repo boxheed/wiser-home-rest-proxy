@@ -10,13 +10,8 @@ import java.security.cert.CertificateException;
 
 public class ProxyFunctions {
 
-    private static final Set<String> IGNORED_HEADERS = [
-        "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
-        "te", "trailer", "transfer-encoding", "upgrade", "host", "content-length"
-    ] as Set;
-
-    private final def options;
-    private final OkHttpClient okclient = getUnsafeOkHttpClient();
+    def options;
+    def okclient = getUnsafeOkHttpClient();
 
     public ProxyFunctions(def options) {
         this.options = options;
@@ -35,7 +30,7 @@ public class ProxyFunctions {
     }
 
     private void handleRequest(def request, String method, byte[] body) {
-        def url = resolveUrl(options.url, request.requestURI.toString());
+        def url = "${options.url}${request.requestURI}";
         info("Proxying {} request to {}", method, url);
 
         def forwardedHeaders = buildHeaders(request, url);
@@ -55,24 +50,11 @@ public class ProxyFunctions {
         }
     }
 
-    String resolveUrl(String targetUrl, String requestUri) {
-        if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
-            targetUrl = "http://" + targetUrl
-        }
-        if (targetUrl.endsWith("/")) {
-            targetUrl = targetUrl.substring(0, targetUrl.length() - 1)
-        }
-        return "${targetUrl}${requestUri}"
-    }
-
     private Headers buildHeaders(def request, String url) {
         def requestHeaders = request.getRequestHeaders();
         def forwardedHeaders = new Headers.Builder();
 
         for (def header : requestHeaders.entrySet()) {
-            if (IGNORED_HEADERS.contains(header.key.toLowerCase())) {
-                continue;
-            }
             header.value.each { value ->
                 info("Setting header {}: {}", header.key, value);
                 forwardedHeaders.add(header.key, value);
@@ -80,9 +62,7 @@ public class ProxyFunctions {
         }
 
         forwardedHeaders.set("Host", new URL(url).getHost());
-        if (options.secret) {
-            forwardedHeaders.set("Secret", options.secret);
-        }
+        forwardedHeaders.set("Secret", options.secret);
         return forwardedHeaders.build();
     }
 
@@ -92,9 +72,6 @@ public class ProxyFunctions {
 
         def responseHeaders = okResponse.headers;
         for (def headerName : responseHeaders.names()) {
-            if (IGNORED_HEADERS.contains(headerName.toLowerCase())) {
-                continue;
-            }
             def headerValues = responseHeaders.values(headerName);
             headerValues.each { value ->
                 info("Setting response header {}: {}", headerName, value);
