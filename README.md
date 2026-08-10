@@ -97,24 +97,26 @@ Located under [`src/test/groovy/com/fizzpod/wiserproxy/`](file:///workspace/wise
 
 ### 2. GitHub Actions Workflows
 Found in [`.github/workflows/`](file:///workspace/wiser-home-rest-proxy/.github/workflows/):
-- **CI Workflow (`ci.yml`)**: Triggered on pushes/PRs to `main` or `develop`. Compiles code, runs tests, generates JaCoCo coverage reports, and builds the shadow JAR.
-- **Release Workflow (`release.yml`)**: Triggered when a version tag (`v*` or `release-*`) is pushed. Compiles shadow JARs and distribution archives (`.zip`, `.tar`) and automatically publishes a GitHub Release with binary assets attached.
+- **CI Workflow (`ci.yml`)**: Triggered on pushes/PRs to `main` or `develop`. Compiles code, runs unit & integration tests, generates JaCoCo coverage reports, and verifies the build.
+- **Auto Release Workflow (`release.yml`)**: Triggered on any push or PR merge to `main`. Analyzes commit history against [Conventional Commits](https://www.conventionalcommits.org/), calculates the next Semantic Version (`vMAJOR.MINOR.PATCH`), pushes the Git tag, builds all distribution binaries (`shadowJar`, `.zip`, `.tar`), and publishes a GitHub Release with attached assets and generated release notes.
 
 ---
 
 ## Developer Workflow
 
 1. **Branching Model**:
-   - `develop`: Main development branch for new features and bug fixes.
-   - `main`: Production-ready release branch.
-2. **Submitting Changes**:
-   - Create a feature branch off `develop` and submit a Pull Request targeting `develop`.
-   - GitHub Actions CI will run tests and coverage checks automatically.
-3. **Creating a Release**:
-   - Merge `develop` into `main`.
-   - Tag the release commit (e.g. `v1.0.0` or `release-1.0.0`) and push the tag:
-     ```bash
-     git tag -a v1.0.0 -m "Release v1.0.0"
-     git push origin v1.0.0
-     ```
-   - GitHub Actions will assemble all binary distributions (`shadowJar`, `distZip`, `distTar`) and publish the release with attached assets.
+   - `develop`: Active development branch for new features and bug fixes.
+   - `main`: Production release branch. Any push/merge to `main` automatically triggers a new release build and tag.
+2. **Commit Message Format (Conventional Commits)**:
+   Use standard commit prefixes when making changes:
+   - `feat:` -> Bumps **MINOR** version (e.g. `v1.0.0` -> `v1.1.0`).
+   - `fix:` / `docs:` / `refactor:` / `chore:` -> Bumps **PATCH** version (e.g. `v1.0.0` -> `v1.0.1`).
+   - `feat!:` or `BREAKING CHANGE:` in commit footer -> Bumps **MAJOR** version (e.g. `v1.0.0` -> `v2.0.0`).
+3. **Release Creation Process**:
+   - Work on features in `develop` (or feature branches targeting `develop`).
+   - Open a Pull Request from `develop` into `main`.
+   - When the PR is merged into `main`, GitHub Actions automatically:
+     1. Evaluates commit messages and calculates the new SemVer tag.
+     2. Tags the release commit in git.
+     3. Compiles `shadowJar` and distribution archives.
+     4. Publishes a GitHub Release with full release notes and attached binaries.
