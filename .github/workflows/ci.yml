@@ -29,8 +29,8 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Run Tests & Build Shadow Jar
-        run: ./gradlew check shadowJar jacocoTestReport
+      - name: Run Tests, Coverage & Build Distributions
+        run: ./gradlew build shadowJar distZip distTar jacocoTestReport
 
       - name: Upload Test Report
         if: always()
