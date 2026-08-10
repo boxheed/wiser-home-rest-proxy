@@ -11,7 +11,7 @@ buildscript {
 	}
 	dependencies {
 		classpath 'com.fizzpod:gradle-java-opinion:0.14.28'
-		classpath 'com.github.johnrengelman:shadow:8.1.1'
+		classpath 'com.gradleup.shadow:shadow-gradle-plugin:8.3.6'
   	}
 }
 repositories {
@@ -24,6 +24,8 @@ repositories {
 
 apply plugin: 'groovy'
 apply plugin: 'application'
+apply plugin: 'jacoco'
+apply plugin: 'com.gradleup.shadow'
 
 
 compileJava {
@@ -50,6 +52,7 @@ dependencies {
 
 	testImplementation platform("org.spockframework:spock-bom:2.3-groovy-4.0")
   	testImplementation "org.spockframework:spock-core"
+	testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
 
 }
 
@@ -73,4 +76,14 @@ test {
   testLogging {
     events "passed", "skipped", "failed"
   }
+  finalizedBy jacocoTestReport
 }
+
+jacocoTestReport {
+  dependsOn test
+  reports {
+    xml.required = true
+    html.required = true
+  }
+}
+

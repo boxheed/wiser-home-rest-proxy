@@ -1,24 +1,23 @@
 package com.fizzpod.wiserproxy;
 
 import com.sun.net.httpserver.HttpServer
+import java.net.InetSocketAddress
 
 import static org.tinylog.Logger.*;
 
 import org.tinylog.*
-import com.fizzpod.ibroadcast.functions.*;
-
 import groovy.json.JsonOutput
 
 
 public class WebServer {
 
-    public static def run(def options) {
+    public static HttpServer run(def options) {
         def proxy = new ProxyFunctions(options)
         info("Starting Web Server on port {}", options.port)
-        HttpServer.create(new InetSocketAddress(options.port), 0).with {
+        def server = HttpServer.create(new InetSocketAddress(options.port), 0)
+        server.with {
             createContext("/data") { http ->
                 try {
-                    // Proxy to IBroadcast functions
                     info("Received {} on {} from {}", http.requestMethod, http.requestURI, http.remoteAddress.hostName)
                     if("GET" == http.requestMethod) {
                         proxy.doGet(http)
@@ -64,8 +63,8 @@ public class WebServer {
                 }
             }
             start()
-            //Thread.sleep(5000);
         }
+        return server
     }
 
 }
