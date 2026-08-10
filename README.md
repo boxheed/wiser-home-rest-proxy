@@ -80,16 +80,41 @@ To run the server and pass custom arguments:
 ./gradlew run --args="-p 8080 -u http://wiser.local -s MY_SECRET_TOKEN"
 ```
 
-### Run Tests
-To execute the Spock unit tests:
+### Run Tests & Coverage
+To execute the Spock unit and integration tests along with JaCoCo code coverage:
 ```bash
-./gradlew test
+./gradlew check jacocoTestReport
 ```
 
 ---
 
-## Test Architecture
+## Test & CI Architecture
 
-The codebase includes two Spock specifications under `src/test/groovy/com/fizzpod/wiserproxy/`:
-- **[CLISpec.groovy](file:///workspace/wiser-home-rest-proxy/src/test/groovy/com/fizzpod/wiserproxy/CLISpec.groovy)**: Verifies CLI argument parsing, option overrides, and environment variable fallbacks.
-- **[ProxyFunctionsSpec.groovy](file:///workspace/wiser-home-rest-proxy/src/test/groovy/com/fizzpod/wiserproxy/ProxyFunctionsSpec.groovy)**: Verifies internal URL resolution, header filtering (stripping hop-by-hop headers), and authentication insertion.
+### 1. Spock Test Suite
+Located under [`src/test/groovy/com/fizzpod/wiserproxy/`](file:///workspace/wiser-home-rest-proxy/src/test/groovy/com/fizzpod/wiserproxy/):
+- **[CLISpec.groovy](file:///workspace/wiser-home-rest-proxy/src/test/groovy/com/fizzpod/wiserproxy/CLISpec.groovy)**: Unit tests verifying CLI option parsing, short/long flag overrides, and default arguments.
+- **[ProxyIntegrationSpec.groovy](file:///workspace/wiser-home-rest-proxy/src/test/groovy/com/fizzpod/wiserproxy/ProxyIntegrationSpec.groovy)**: Integration tests using an in-memory HTTP target server to verify real HTTP GET, POST, status checks, secret header injection, and response streaming.
+
+### 2. GitHub Actions Workflows
+Found in [`.github/workflows/`](file:///workspace/wiser-home-rest-proxy/.github/workflows/):
+- **CI Workflow (`ci.yml`)**: Triggered on pushes/PRs to `main` or `develop`. Compiles code, runs tests, generates JaCoCo coverage reports, and builds the shadow JAR.
+- **Release Workflow (`release.yml`)**: Triggered when a version tag (`v*` or `release-*`) is pushed. Compiles shadow JARs and distribution archives (`.zip`, `.tar`) and automatically publishes a GitHub Release with binary assets attached.
+
+---
+
+## Developer Workflow
+
+1. **Branching Model**:
+   - `develop`: Main development branch for new features and bug fixes.
+   - `main`: Production-ready release branch.
+2. **Submitting Changes**:
+   - Create a feature branch off `develop` and submit a Pull Request targeting `develop`.
+   - GitHub Actions CI will run tests and coverage checks automatically.
+3. **Creating a Release**:
+   - Merge `develop` into `main`.
+   - Tag the release commit (e.g. `v1.0.0` or `release-1.0.0`) and push the tag:
+     ```bash
+     git tag -a v1.0.0 -m "Release v1.0.0"
+     git push origin v1.0.0
+     ```
+   - GitHub Actions will assemble all binary distributions (`shadowJar`, `distZip`, `distTar`) and publish the release with attached assets.
