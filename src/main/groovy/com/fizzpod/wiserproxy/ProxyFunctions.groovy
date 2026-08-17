@@ -44,15 +44,32 @@ public class ProxyFunctions {
 
     def options;
     def okclient;
+    def cache;
 
     public ProxyFunctions(def options) {
-        this.options = options;
-        this.okclient = getUnsafeOkHttpClient();
+        this(options, getUnsafeOkHttpClient(), null);
     }
 
     public ProxyFunctions(def options, OkHttpClient okclient) {
+        this(options, okclient, null);
+    }
+
+    public ProxyFunctions(def options, OkHttpClient okclient, ResponseCache cache) {
         this.options = options;
         this.okclient = okclient;
+        if (cache != null) {
+            this.cache = cache;
+        } else {
+            long ttl = 5;
+            if (options != null) {
+                if (options.c != null) {
+                    ttl = options.c as long;
+                } else if (options['cache-ttl'] != null) {
+                    ttl = options['cache-ttl'] as long;
+                }
+            }
+            this.cache = new ResponseCache(ttl);
+        }
     }
 
     def doGet(def request) {
@@ -85,6 +102,18 @@ public class ProxyFunctions {
     }
 
     private void handleRequest(def request, String method, byte[] body) {
+        def cacheKey = request.requestURI as String;
+
+        if (method == "GET" && cache != null && cache.isEnabled()) {
+            def cached = cache.get(cacheKey);
+            if (cached != null) {
+                info("Cache HIT for GET {}", cacheKey);
+                serveCachedResponse(request, cached);
+                return;
+            }
+            info("Cache MISS for GET {}", cacheKey);
+        }
+
         def url = normalizeUrl(options?.url as String, request.requestURI as String);
         info("Proxying {} request to {}", method, url);
 
@@ -103,10 +132,10 @@ public class ProxyFunctions {
             requestBuilder.get();
         }
 
-        executeWithRetry(request, requestBuilder.build());
+        executeWithRetry(request, requestBuilder.build(), method, cacheKey);
     }
 
-    private void executeWithRetry(def request, Request okHttpRequest) {
+    private void executeWithRetry(def request, Request okHttpRequest, String method, String cacheKey) {
         int attempts = 0;
         while (attempts < MAX_RETRIES) {
             attempts++;
@@ -114,7 +143,7 @@ public class ProxyFunctions {
             try {
                 okResponse = okclient.newCall(okHttpRequest).execute();
                 byte[] responseBytes = okResponse.body() != null ? okResponse.body().bytes() : new byte[0];
-                handleResponse(request, okResponse, responseBytes);
+                handleResponse(request, okResponse, responseBytes, method, cacheKey);
                 return;
             } catch (IOException e) {
                 if (attempts >= MAX_RETRIES) {
@@ -157,18 +186,31 @@ public class ProxyFunctions {
         return forwardedHeaders.build();
     }
 
-    private void handleResponse(def request, Response okResponse, byte[] responseBytes) {
+    private void handleResponse(def request, Response okResponse, byte[] responseBytes, String method = "GET", String cacheKey = null) {
         def status = okResponse.code;
         info("Received response code: {} from wiser", status);
 
         def responseHeaders = okResponse.headers;
+        Map<String, List<String>> savedHeaders = new HashMap<>();
+
         for (def headerName : responseHeaders.names()) {
             if (headerName != null && !HOP_BY_HOP_RESPONSE_HEADERS.contains(headerName.toLowerCase())) {
                 def headerValues = responseHeaders.values(headerName);
+                savedHeaders.put(headerName, new ArrayList<>(headerValues));
                 headerValues.each { value ->
                     info("Setting response header {}: {}", headerName, value);
                     request.responseHeaders.add(headerName, value);
                 }
+            }
+        }
+
+        if (cache != null && cache.isEnabled()) {
+            request.responseHeaders.add("X-Cache", "MISS");
+            if (method == "GET" && status >= 200 && status < 300) {
+                cache.put(cacheKey, status, savedHeaders, responseBytes);
+            } else if (method == "POST" || method == "PATCH") {
+                info("Invalidating cache due to {} on {}", method, cacheKey);
+                cache.invalidateAll();
             }
         }
 
@@ -179,6 +221,25 @@ public class ProxyFunctions {
             }
         } else {
             request.sendResponseHeaders(status, -1);
+            request.responseBody.close();
+        }
+    }
+
+    private void serveCachedResponse(def request, ResponseCache.CachedResponse cached) {
+        for (def entry : cached.headers.entrySet()) {
+            entry.value.each { value ->
+                request.responseHeaders.add(entry.key, value);
+            }
+        }
+        request.responseHeaders.add("X-Cache", "HIT");
+
+        if (cached.body != null && cached.body.length > 0) {
+            request.sendResponseHeaders(cached.statusCode, cached.body.length);
+            request.responseBody.withStream { outStream ->
+                outStream.write(cached.body);
+            }
+        } else {
+            request.sendResponseHeaders(cached.statusCode, -1);
             request.responseBody.close();
         }
     }

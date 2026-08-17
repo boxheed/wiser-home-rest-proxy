@@ -67,21 +67,35 @@ class ProxyIntegrationSpec extends Specification {
         }
     }
 
-    def "should proxy GET request to Wiser hub and inject Secret header"() {
-        when:
-        def request = new Request.Builder()
+    def "should proxy GET request to Wiser hub, inject Secret header, and cache subsequent requests"() {
+        when: "First request - Cache MISS"
+        def request1 = new Request.Builder()
             .url("http://localhost:${proxyPort}/data/domain/")
             .get()
             .build()
-        def response = client.newCall(request).execute()
-        def body = response.body().string()
+        def response1 = client.newCall(request1).execute()
+        def body1 = response1.body().string()
 
         then:
-        response.code() == 200
-        body == '{"domain":{"System":{"Name":"WiserHub"}}}'
+        response1.code() == 200
+        body1 == '{"domain":{"System":{"Name":"WiserHub"}}}'
+        response1.header("X-Cache") == "MISS"
         receivedMethod == "GET"
         receivedPath == "/data/domain/"
         receivedSecretHeader == "test-secret-token"
+
+        when: "Second request - Cache HIT"
+        def request2 = new Request.Builder()
+            .url("http://localhost:${proxyPort}/data/domain/")
+            .get()
+            .build()
+        def response2 = client.newCall(request2).execute()
+        def body2 = response2.body().string()
+
+        then:
+        response2.code() == 200
+        body2 == '{"domain":{"System":{"Name":"WiserHub"}}}'
+        response2.header("X-Cache") == "HIT"
     }
 
     def "should proxy POST request with payload to Wiser hub"() {

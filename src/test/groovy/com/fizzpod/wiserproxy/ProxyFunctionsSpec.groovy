@@ -227,4 +227,110 @@ class ProxyFunctionsSpec extends Specification {
         cleanup:
         server.shutdown()
     }
+
+    def "should cache GET responses and return HIT on subsequent requests"() {
+        given:
+        def server = new MockWebServer()
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"domain":"test"}').addHeader("Content-Type", "application/json"))
+        server.start()
+
+        def proxy = new ProxyFunctions([url: server.url("/").toString(), secret: "tok", c: 10])
+        def exchange1 = new FakeHttpExchange()
+        exchange1.requestURI = URI.create("/data/domain/")
+        def exchange2 = new FakeHttpExchange()
+        exchange2.requestURI = URI.create("/data/domain/")
+
+        when: "First request - Cache MISS"
+        proxy.doGet(exchange1)
+
+        then:
+        exchange1.responseCode == 200
+        exchange1.responseHeaders.getFirst("X-Cache") == "MISS"
+        exchange1.responseBody.toString() == '{"domain":"test"}'
+        server.requestCount == 1
+
+        when: "Second request - Cache HIT"
+        proxy.doGet(exchange2)
+
+        then:
+        exchange2.responseCode == 200
+        exchange2.responseHeaders.getFirst("X-Cache") == "HIT"
+        exchange2.responseBody.toString() == '{"domain":"test"}'
+        server.requestCount == 1 // No second network call made!
+
+        cleanup:
+        server.shutdown()
+    }
+
+    def "should invalidate cache on POST or PATCH mutations"() {
+        given:
+        def server = new MockWebServer()
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"temp":18}').addHeader("Content-Type", "application/json"))
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"set":21}').addHeader("Content-Type", "application/json"))
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"temp":21}').addHeader("Content-Type", "application/json"))
+        server.start()
+
+        def proxy = new ProxyFunctions([url: server.url("/").toString(), secret: "tok", c: 10])
+        def getExchange1 = new FakeHttpExchange()
+        getExchange1.requestURI = URI.create("/data/domain/Room")
+
+        def patchExchange = new FakeHttpExchange()
+        patchExchange.requestURI = URI.create("/data/domain/Room/1")
+        patchExchange.requestMethod = "PATCH"
+
+        def getExchange2 = new FakeHttpExchange()
+        getExchange2.requestURI = URI.create("/data/domain/Room")
+
+        when: "Initial GET caches response"
+        proxy.doGet(getExchange1)
+
+        then:
+        getExchange1.responseHeaders.getFirst("X-Cache") == "MISS"
+        getExchange1.responseBody.toString() == '{"temp":18}'
+        server.requestCount == 1
+
+        when: "PATCH mutation invalidates cache"
+        proxy.doPatch(patchExchange)
+
+        then:
+        patchExchange.responseCode == 200
+        server.requestCount == 2
+
+        when: "Next GET fetches fresh response"
+        proxy.doGet(getExchange2)
+
+        then:
+        getExchange2.responseHeaders.getFirst("X-Cache") == "MISS"
+        getExchange2.responseBody.toString() == '{"temp":21}'
+        server.requestCount == 3
+
+        cleanup:
+        server.shutdown()
+    }
+
+    def "should not cache when TTL is 0 (disabled)"() {
+        given:
+        def server = new MockWebServer()
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"v":1}'))
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"v":2}'))
+        server.start()
+
+        def proxy = new ProxyFunctions([url: server.url("/").toString(), secret: "tok", c: 0])
+        def exchange1 = new FakeHttpExchange()
+        exchange1.requestURI = URI.create("/data/domain/")
+        def exchange2 = new FakeHttpExchange()
+        exchange2.requestURI = URI.create("/data/domain/")
+
+        when:
+        proxy.doGet(exchange1)
+        proxy.doGet(exchange2)
+
+        then:
+        exchange1.responseHeaders.getFirst("X-Cache") == null
+        exchange2.responseHeaders.getFirst("X-Cache") == null
+        server.requestCount == 2
+
+        cleanup:
+        server.shutdown()
+    }
 }

@@ -8,9 +8,10 @@ A REST proxy server for the Wiser Home Smart Hub. It acts as an intermediate HTT
 
 - **Automated Scheme Prepending**: Automatically resolves target hub URLs (e.g. defaulting to `http://wiser.local`) and handles missing protocols or trailing slashes seamlessly.
 - **Header Injection & Filtering**: Injects the required Wiser hub `Secret` authentication header while filtering out hop-by-hop/metadata headers (e.g. `Connection`, `Host`, `Content-Length`) that could interfere with the HTTP client.
+- **In-Memory Response Caching**: Caches successful `GET` responses with configurable TTL to protect the embedded Wiser hub from high-frequency polling, and automatically invalidates cache on `POST`/`PATCH` state mutations.
 - **Concurrent Request Handling**: Employs a Java cached thread pool executor to handle multiple proxy requests concurrently, preventing serial request blocking.
 - **Command Line Interface**: Configurable via command-line arguments or environment variables.
-- **Spock Test Suite**: Covered by unit tests for argument parsing and request proxying behavior.
+- **Spock Test Suite**: Covered by unit tests for argument parsing, caching behavior, and request proxying.
 
 ---
 
@@ -26,6 +27,7 @@ You can launch the proxy with custom options via the CLI. If no arguments are pr
 | `-p` | `--port` | `WISER_PROXY_PORT` | `9080` | The port the proxy server will listen on. |
 | `-s` | `--secret` | `WISER_SECRET` | - | Your Wiser hub secret token. |
 | `-u` | `--url` | `WISER_URL` | `http://wiser.local` | The target URL of your Wiser Home hub. |
+| `-c` | `--cache-ttl` | `WISER_CACHE_TTL` | `5` | Cache TTL in seconds for `GET` responses (`0` to disable caching). |
 
 ---
 
