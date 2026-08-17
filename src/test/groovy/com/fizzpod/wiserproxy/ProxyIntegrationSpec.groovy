@@ -103,6 +103,42 @@ class ProxyIntegrationSpec extends Specification {
         receivedBody == jsonPayload
     }
 
+    def "should proxy PATCH request with payload to Wiser hub"() {
+        when:
+        def jsonPayload = '{"Room":[{"id":1,"SetPoint":200}]}'
+        def request = new Request.Builder()
+            .url("http://localhost:${proxyPort}/data/domain/Room")
+            .patch(RequestBody.create(MediaType.parse("application/json"), jsonPayload))
+            .build()
+        def response = client.newCall(request).execute()
+        def body = response.body().string()
+
+        then:
+        response.code() == 200
+        body == '{"domain":{"System":{"Name":"WiserHub"}}}'
+        receivedMethod == "PATCH"
+        receivedPath == "/data/domain/Room"
+        receivedSecretHeader == "test-secret-token"
+        receivedBody == jsonPayload
+    }
+
+    def "should filter Connection close request header and handle chunked response cleanly"() {
+        when:
+        def request = new Request.Builder()
+            .url("http://localhost:${proxyPort}/data/domain/")
+            .header("Connection", "close")
+            .header("User-Agent", "Uptime-Kuma/1.23.16")
+            .get()
+            .build()
+        def response = client.newCall(request).execute()
+        def body = response.body().string()
+
+        then:
+        response.code() == 200
+        body == '{"domain":{"System":{"Name":"WiserHub"}}}'
+        response.header("Content-Type") == "application/json"
+    }
+
     def "should serve health check endpoint /status"() {
         when:
         def request = new Request.Builder()

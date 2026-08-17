@@ -9,12 +9,15 @@ import org.tinylog.*
 import groovy.json.JsonOutput
 
 
+import java.util.concurrent.Executors;
+
 public class WebServer {
 
     public static HttpServer run(def options) {
         def proxy = new ProxyFunctions(options)
         info("Starting Web Server on port {}", options.port)
         def server = HttpServer.create(new InetSocketAddress(options.port), 0)
+        server.setExecutor(Executors.newCachedThreadPool())
         server.with {
             createContext("/data") { http ->
                 try {
