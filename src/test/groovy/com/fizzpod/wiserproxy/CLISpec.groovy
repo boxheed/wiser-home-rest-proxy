@@ -12,7 +12,24 @@ class CLISpec extends Specification {
         options != null
         options.port == 9080
         options.url == "wiser.local"
+        options.c == 5
         !options.secret
+    }
+
+    def "should override cache ttl with short option -c"() {
+        when:
+        def options = CLI.parse(["-c", "15"] as String[])
+
+        then:
+        options.c == 15
+    }
+
+    def "should override cache ttl with long option --cache-ttl"() {
+        when:
+        def options = CLI.parse(["--cache-ttl", "30"] as String[])
+
+        then:
+        options.c == 30
     }
 
     def "should override port with short option -p"() {
