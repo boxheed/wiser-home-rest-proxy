@@ -50,7 +50,7 @@ dependencies {
 	implementation 'org.tinylog:tinylog-impl:2.7.0'
 	implementation 'com.squareup.okhttp3:okhttp:5.1.0'
 
-	testImplementation platform("org.spockframework:spock-bom:2.3-groovy-4.0")
+	testImplementation platform("org.spockframework:spock-bom:2.4-groovy-5.0")
   	testImplementation "org.spockframework:spock-core"
 	testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
 
