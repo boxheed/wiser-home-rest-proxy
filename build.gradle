@@ -11,7 +11,7 @@ buildscript {
 	}
 	dependencies {
 		classpath 'com.fizzpod:gradle-java-opinion:0.14.28'
-		classpath 'com.gradleup.shadow:shadow-gradle-plugin:8.3.6'
+		classpath 'com.gradleup.shadow:shadow-gradle-plugin:9.6.1'
   	}
 }
 repositories {
