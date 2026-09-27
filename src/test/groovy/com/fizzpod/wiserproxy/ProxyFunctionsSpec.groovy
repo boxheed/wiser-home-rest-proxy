@@ -333,4 +333,107 @@ class ProxyFunctionsSpec extends Specification {
         cleanup:
         server.shutdown()
     }
+
+    def "should proxy DELETE request without body"() {
+        given:
+        def server = new MockWebServer()
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"deleted":true}'))
+        server.start()
+
+        def proxy = new ProxyFunctions([url: server.url("/").toString(), secret: "tok"])
+        def exchange = new FakeHttpExchange()
+        exchange.requestURI = URI.create("/data/v2/domain/Room/1")
+        exchange.requestMethod = "DELETE"
+
+        when:
+        proxy.doDelete(exchange)
+
+        then:
+        exchange.responseCode == 200
+        exchange.responseBody.toString() == '{"deleted":true}'
+        server.requestCount == 1
+        def recordedRequest = server.takeRequest()
+        recordedRequest.method == "DELETE"
+        recordedRequest.path == "/data/v2/domain/Room/1"
+        recordedRequest.getHeader("Secret") == "tok"
+
+        cleanup:
+        server.shutdown()
+    }
+
+    def "should proxy DELETE request with body"() {
+        given:
+        def server = new MockWebServer()
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"deleted":true}'))
+        server.start()
+
+        def proxy = new ProxyFunctions([url: server.url("/").toString(), secret: "tok"])
+        def exchange = new FakeHttpExchange()
+        exchange.requestURI = URI.create("/data/v2/schedules/heating/1")
+        exchange.requestMethod = "DELETE"
+        def payload = '{"id":1}'.bytes
+        exchange.requestBody = new ByteArrayInputStream(payload)
+        exchange.requestHeaders.add("Content-Type", "application/json")
+
+        when:
+        proxy.doDelete(exchange)
+
+        then:
+        exchange.responseCode == 200
+        exchange.responseBody.toString() == '{"deleted":true}'
+        server.requestCount == 1
+        def recordedRequest = server.takeRequest()
+        recordedRequest.method == "DELETE"
+        recordedRequest.path == "/data/v2/schedules/heating/1"
+        recordedRequest.body.readUtf8() == '{"id":1}'
+
+        cleanup:
+        server.shutdown()
+    }
+
+    def "should invalidate cache on DELETE mutations"() {
+        given:
+        def server = new MockWebServer()
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"items":[1]}').addHeader("Content-Type", "application/json"))
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"deleted":true}').addHeader("Content-Type", "application/json"))
+        server.enqueue(new MockResponse().setResponseCode(200).setBody('{"items":[]}').addHeader("Content-Type", "application/json"))
+        server.start()
+
+        def proxy = new ProxyFunctions([url: server.url("/").toString(), secret: "tok", c: 10])
+        def getExchange1 = new FakeHttpExchange()
+        getExchange1.requestURI = URI.create("/data/v2/domain/Room")
+
+        def deleteExchange = new FakeHttpExchange()
+        deleteExchange.requestURI = URI.create("/data/v2/domain/Room/1")
+        deleteExchange.requestMethod = "DELETE"
+
+        def getExchange2 = new FakeHttpExchange()
+        getExchange2.requestURI = URI.create("/data/v2/domain/Room")
+
+        when: "Initial GET caches response"
+        proxy.doGet(getExchange1)
+
+        then:
+        getExchange1.responseHeaders.getFirst("X-Cache") == "MISS"
+        getExchange1.responseBody.toString() == '{"items":[1]}'
+        server.requestCount == 1
+
+        when: "DELETE mutation invalidates cache"
+        proxy.doDelete(deleteExchange)
+
+        then:
+        deleteExchange.responseCode == 200
+        server.requestCount == 2
+
+        when: "Next GET fetches fresh response"
+        proxy.doGet(getExchange2)
+
+        then:
+        getExchange2.responseHeaders.getFirst("X-Cache") == "MISS"
+        getExchange2.responseBody.toString() == '{"items":[]}'
+        server.requestCount == 3
+
+        cleanup:
+        server.shutdown()
+    }
 }

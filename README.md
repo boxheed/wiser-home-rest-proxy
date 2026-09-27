@@ -8,7 +8,7 @@ A REST proxy server for the Wiser Home Smart Hub. It acts as an intermediate HTT
 
 - **Automated Scheme Prepending**: Automatically resolves target hub URLs (e.g. defaulting to `http://wiser.local`) and handles missing protocols or trailing slashes seamlessly.
 - **Header Injection & Filtering**: Injects the required Wiser hub `Secret` authentication header while filtering out hop-by-hop/metadata headers (e.g. `Connection`, `Host`, `Content-Length`) that could interfere with the HTTP client.
-- **In-Memory Response Caching**: Caches successful `GET` responses with configurable TTL to protect the embedded Wiser hub from high-frequency polling, and automatically invalidates cache on `POST`/`PATCH` state mutations.
+- **In-Memory Response Caching**: Caches successful `GET` responses with configurable TTL to protect the embedded Wiser hub from high-frequency polling, and automatically invalidates cache on `POST`/`PATCH`/`DELETE` state mutations.
 - **Concurrent Request Handling**: Employs a Java cached thread pool executor to handle multiple proxy requests concurrently, preventing serial request blocking.
 - **Command Line Interface**: Configurable via command-line arguments or environment variables.
 - **Spock Test Suite**: Covered by unit tests for argument parsing, caching behavior, and request proxying.
@@ -36,7 +36,7 @@ You can launch the proxy with custom options via the CLI. If no arguments are pr
 Once running, the proxy server exposes the following HTTP endpoints:
 
 ### 1. `/data` Proxy Endpoint
-* **Methods**: `GET`, `POST`, `PATCH`
+* **Methods**: `GET`, `POST`, `PATCH`, `DELETE`
 * **Path**: `/data/*`
 * **Description**: Any request starting with `/data` is forwarded directly to the Wiser hub. 
   For example, a `GET` request to `http://localhost:9080/data/domain/` will be proxied as a `GET` request to `http://wiser.local/data/domain/` with the configured secret token automatically injected as the `Secret` header.

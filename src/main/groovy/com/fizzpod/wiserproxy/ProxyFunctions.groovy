@@ -84,6 +84,10 @@ public class ProxyFunctions {
         handleRequest(request, "PATCH", request.requestBody.bytes);
     }
 
+    def doDelete(def request) {
+        handleRequest(request, "DELETE", request.requestBody.bytes);
+    }
+
     protected String normalizeUrl(String baseUrl, String path) {
         String base = (baseUrl != null && !baseUrl.trim().isEmpty()) ? baseUrl.trim() : "http://wiser.local";
         if (!base.startsWith("http://") && !base.startsWith("https://")) {
@@ -128,6 +132,16 @@ public class ProxyFunctions {
                 contentType = "application/json";
             }
             requestBuilder.method(method, RequestBody.create(MediaType.parse(contentType), body != null ? body : new byte[0]));
+        } else if (method == "DELETE") {
+            if (body != null && body.length > 0) {
+                def contentType = request.getRequestHeaders().getFirst("Content-Type");
+                if (contentType == null || contentType.trim().isEmpty()) {
+                    contentType = "application/json";
+                }
+                requestBuilder.delete(RequestBody.create(MediaType.parse(contentType), body));
+            } else {
+                requestBuilder.delete();
+            }
         } else {
             requestBuilder.get();
         }
@@ -208,7 +222,7 @@ public class ProxyFunctions {
             request.responseHeaders.add("X-Cache", "MISS");
             if (method == "GET" && status >= 200 && status < 300) {
                 cache.put(cacheKey, status, savedHeaders, responseBytes);
-            } else if (method == "POST" || method == "PATCH") {
+            } else if (method == "POST" || method == "PATCH" || method == "DELETE") {
                 info("Invalidating cache due to {} on {}", method, cacheKey);
                 cache.invalidateAll();
             }
