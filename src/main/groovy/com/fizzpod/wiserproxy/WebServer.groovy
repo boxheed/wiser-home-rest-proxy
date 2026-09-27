@@ -28,6 +28,8 @@ public class WebServer {
                         proxy.doPost(http)
                     } else if("PATCH" == http.requestMethod) {
                         proxy.doPatch(http)
+                    } else if("DELETE" == http.requestMethod) {
+                        proxy.doDelete(http)
                     } else {
                         throw new RuntimeException("Unsupported method: ${http.requestMethod}")
                     }

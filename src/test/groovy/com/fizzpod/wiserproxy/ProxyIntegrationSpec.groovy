@@ -136,6 +136,23 @@ class ProxyIntegrationSpec extends Specification {
         receivedBody == jsonPayload
     }
 
+    def "should proxy DELETE request to Wiser hub"() {
+        when:
+        def request = new Request.Builder()
+            .url("http://localhost:${proxyPort}/data/v2/schedules/heating/1")
+            .delete()
+            .build()
+        def response = client.newCall(request).execute()
+        def body = response.body().string()
+
+        then:
+        response.code() == 200
+        body == '{"domain":{"System":{"Name":"WiserHub"}}}'
+        receivedMethod == "DELETE"
+        receivedPath == "/data/v2/schedules/heating/1"
+        receivedSecretHeader == "test-secret-token"
+    }
+
     def "should filter Connection close request header and handle chunked response cleanly"() {
         when:
         def request = new Request.Builder()
