@@ -58,6 +58,22 @@ Once running, the proxy server exposes the following HTTP endpoints:
 
 ---
 
+## Wiser API Reference & Documentation
+
+Detailed documentation and endpoint references for the Wiser HeatHub REST APIs are available in the [`docs/`](file:///workspace/docs/) directory:
+
+- **[Wiser API Overview & V1 vs V2 Comparison](file:///workspace/docs/README.md)**: Architectural comparison, payload differences, and proxy routing notes.
+- **[Wiser REST API v1 Specification](file:///workspace/docs/wiser-api-v1.md)**: Documentation for the v1 API (`/data/domain/`, `/data/network/`), based on [asantaga/wiserheatingapi](https://github.com/asantaga/wiserheatingapi).
+- **[Wiser REST API v2 Specification](file:///workspace/docs/wiser-api-v2.md)**: Documentation for the v2 API (`/data/v2/domain/`, `/data/v2/schedules/`, `/data/v2/opentherm/`), based on [msp1974/wiserHeatAPIv2](https://github.com/msp1974/wiserHeatAPIv2).
+
+### Credits & Attribution
+We gratefully acknowledge the pioneering work and reverse engineering by:
+- **Angelo Santagata** ([@asantaga](https://github.com/asantaga)) for the original [wiserheatingapi](https://github.com/asantaga/wiserheatingapi) Python library and Home Assistant platform integration.
+- **Mark Parker** ([@msp1974](https://github.com/msp1974)) for the modular [wiserHeatAPIv2](https://github.com/msp1974/wiserHeatAPIv2) Python library supporting the expanded device ecosystem and schedules API.
+- The [Knightnet Knowledgebase](https://it.knightnet.org.uk/kb/nr-qa/drayton-wiser-heating-control/) for publishing foundational hub discovery procedures.
+
+---
+
 ## Building and Running
 
 The project uses Gradle for builds and execution.
