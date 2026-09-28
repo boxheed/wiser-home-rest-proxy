@@ -43,8 +43,8 @@ application {
 }
 
 dependencies {
-	implementation 'org.apache.groovy:groovy-all:5.1.2'
-	implementation 'org.apache.groovy:groovy-contracts:5.1.2'
+	implementation 'org.apache.groovy:groovy-all:6.0.0'
+	implementation 'org.apache.groovy:groovy-contracts:6.0.0'
 
 	implementation 'org.tinylog:tinylog-api:2.8.0'
 	implementation 'org.tinylog:tinylog-impl:2.8.0'
